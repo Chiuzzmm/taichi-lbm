@@ -1,8 +1,8 @@
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), "openLBM"))
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 import taichi as ti
-import openLBDEM
+import taichi_lbm
 import numpy as np
 from matplotlib import cm
 import time
@@ -43,7 +43,7 @@ print("power_K",power_K)
 
 #==============================================
 name="test"
-lb_field=openLBDEM.LBField(name,NX_LB,NY_LB,num_components)
+lb_field=taichi_lbm.LBField(name,NX_LB,NY_LB,num_components)
 
 #unit 
 LB_params={
@@ -57,8 +57,8 @@ lb_field.init_conversion(LB_params)
 
 
 #==============================================
-boundary_engine=openLBDEM.BoundaryEngine()
-boundary_classifier=openLBDEM.BoundaryClassifier(ti.field(float,shape=(NX_LB,NY_LB)))
+boundary_engine=taichi_lbm.BoundaryEngine()
+boundary_classifier=taichi_lbm.BoundaryClassifier(ti.field(float,shape=(NX_LB,NY_LB)))
 
 
 
@@ -66,8 +66,8 @@ boundary_classifier=openLBDEM.BoundaryClassifier(ti.field(float,shape=(NX_LB,NY_
 def fluid_boundary(i,j):
     return lb_field.mask[i,j]==1
 
-fluid=openLBDEM.BoundarySpec(geometry_fn=fluid_boundary)
-fluid_bc=openLBDEM.FluidBoundary(spec=fluid)
+fluid=taichi_lbm.BoundarySpec(geometry_fn=fluid_boundary)
+fluid_bc=taichi_lbm.FluidBoundary(spec=fluid)
 fluid_bc.precompute(classifier=boundary_classifier)
 boundary_engine.add_boundary_condition("fluid",fluid_bc)
 
@@ -82,8 +82,8 @@ def inside_boundary(i,j):
                 flag=1
     return flag
 
-inside=openLBDEM.BoundarySpec(geometry_fn=inside_boundary)
-inside_bc=openLBDEM.InsideBoundary(spec=inside)
+inside=taichi_lbm.BoundarySpec(geometry_fn=inside_boundary)
+inside_bc=taichi_lbm.InsideBoundary(spec=inside)
 inside_bc.precompute(classifier=boundary_classifier)
 boundary_engine.add_boundary_condition("inside",inside_bc)
 
@@ -98,8 +98,8 @@ def wall_boundary(i,j):
                 flag=1
     return flag
 
-wall=openLBDEM.BoundarySpec(geometry_fn=wall_boundary)
-wall_bc=openLBDEM.BounceBackWall(spec=wall)
+wall=taichi_lbm.BoundarySpec(geometry_fn=wall_boundary)
+wall_bc=taichi_lbm.BounceBackWall(spec=wall)
 wall_bc.precompute(classifier=boundary_classifier)
 boundary_engine.add_boundary_condition("wall",wall_bc)
 
@@ -111,8 +111,8 @@ def inlet_boundary(i, j):
         flag=1
     return flag  
 
-inlet = openLBDEM.BoundarySpec(geometry_fn=inlet_boundary)
-top_bc=openLBDEM.VelocityBB(spec=inlet,velocity_value=ULB,direction=2)
+inlet = taichi_lbm.BoundarySpec(geometry_fn=inlet_boundary)
+top_bc=taichi_lbm.VelocityBB(spec=inlet,velocity_value=ULB,direction=2)
 top_bc.precompute(classifier=boundary_classifier)
 boundary_engine.add_boundary_condition("inlet",top_bc)
 
@@ -120,13 +120,13 @@ boundary_engine.add_boundary_condition("inlet",top_bc)
 lb_field.neighbor_classify()
 boundary_engine.writing_boundary(lb_field)
 #==============================================
-macroscopic_engine=openLBDEM.MacroscopicEngine(fluid_bc.group)
+macroscopic_engine=taichi_lbm.MacroscopicEngine(fluid_bc.group)
 #==============================================
 
 params={
     'group':fluid_bc.group,
-    # 'fluid_model':openLBDEM.NewtonianFluid(1e-4/lb_field.Cnu),
-    'fluid_model':openLBDEM.PowerLawFluid(power_K,power_n),
+    # 'fluid_model':taichi_lbm.NewtonianFluid(1e-4/lb_field.Cnu),
+    'fluid_model':taichi_lbm.PowerLawFluid(power_K,power_n),
     'NX':NX_LB,
     'NY':NY_LB,
     'num_components':num_components,
@@ -134,13 +134,13 @@ params={
     'magic':[1/4.],
     'bulkviscosity':[power_K]
 }
-# collision_engine=openLBDEM.BGKCollision(params)
-# collision_engine=openLBDEM.TRTCollision(params)
-collision_engine=openLBDEM.MRTCollision(params)
+# collision_engine=taichi_lbm.BGKCollision(params)
+# collision_engine=taichi_lbm.TRTCollision(params)
+collision_engine=taichi_lbm.MRTCollision(params)
 # print(collision_engine.diag[127,127,0][8])
 
 #==============================================
-post_processing_engine=openLBDEM.PostProcessingEngine(0)
+post_processing_engine=taichi_lbm.PostProcessingEngine(0)
 
 
 @ti.kernel 

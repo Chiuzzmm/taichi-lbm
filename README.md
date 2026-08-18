@@ -1,7 +1,7 @@
-# openLBM – Lattice Boltzmann Solver Powered by Taichi
+# taichi-lbm – Lattice Boltzmann Solver Powered by Taichi
 
 ## Overview
-openLBM is a fluid simulator based on the Lattice Boltzmann Method (LBM) and the high-performance Taichi computing framework.  
+taichi-lbm is a fluid simulator based on the Lattice Boltzmann Method (LBM) and the high-performance Taichi computing framework.  
 Born from doctoral research, the project has been systematically refactored and open-sourced to provide a  simulation toolchain for complex flow problems.  
 **Note:** The code is still under active development—some features are incomplete and bugs may exist.
 
@@ -17,22 +17,22 @@ Born from doctoral research, the project has been systematically refactored and 
 - Taichi
 
 ### Basic Example
-1. Copy any example from the `example` folder to the same level as the `openLBM` directory and run it.  
+1. Copy any example from the `cases` folder to the same level as the `taichi_lbm` directory and run it.  
 2. Or modify the code in the example and then execute.
 
 ```python
-sys.path.append(os.path.join(os.path.dirname(__file__), "openLBM"))
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 ```
 
 
 ## Core Architecture
 ### Data Structures
 #### `LBField` – Central Field Container
-`LBField` provides a unified data-management and access interface for the entire LBM simulation and is the fundamental building block of openLBM.  
+`LBField` provides a unified data-management and access interface for the entire LBM simulation and is the fundamental building block of taichi-lbm.  
 Leveraging Taichi’s GPU memory management, all field variables can be accessed in parallel on the GPU, support multi-component flows, and allow modular boundary treatment.
 
 ```python
-lb_field = openLBM.LBField(name, NX_LB, NY_LB, num_components)
+lb_field = taichi_lbm.LBField(name, NX_LB, NY_LB, num_components)
 ```
 
 `name`: simulation name  
@@ -46,7 +46,7 @@ Currently `LBField` only supports the `D2Q9` model; further decoupling and modul
 Usage example:
 ```python
 # create field object
-lb_field = openLBM.LBField("channel_flow", 300, 100, 1)
+lb_field = taichi_lbm.LBField("channel_flow", 300, 100, 1)
 
 # configure unit system
 lb_field.init_conversion({
@@ -61,7 +61,7 @@ lb_field.init_LBM(collision_model, fluid_region)
 
 #### `MaskAndGroup` – Lattice Classification & Grouping
 
-`MaskAndGroup` is the core module in openLBM for efficiently classifying and grouping lattice nodes.  
+`MaskAndGroup` is the core module in taichi-lbm for efficiently classifying and grouping lattice nodes.  
 Through intelligent node tagging and grouping, it underpins boundary-condition application, physical-quantity evaluation, and parallel-performance optimization.
 
 Together with the `lb_field.mask` attribute it enforces a unified tagging scheme:
@@ -75,7 +75,7 @@ MASK_SOLID = -1    # solid node
 Grouping data are automatically created during boundary partitioning and contain the lattice indices together with their total counts.
 
 ### Boundary-Condition System
-openLBM’s boundary-condition system is built on a modular design that implements flexible boundary handling through a **descriptor–classifier–condition** three-layer architecture.
+taichi-lbm’s boundary-condition system is built on a modular design that implements flexible boundary handling through a **descriptor–classifier–condition** three-layer architecture.
 
 ```
 BoundarySpec (descriptor)  
@@ -99,7 +99,7 @@ def inlet_boundary(i, j):
     return flag
 
 # create boundary descriptor
-inlet = openLBDEM.BoundarySpec(geometry_fn=inlet_boundary)
+inlet = taichi_lbm.BoundarySpec(geometry_fn=inlet_boundary)
 ```
 
 `BoundaryEngine` additionally supplies two ready-to-use helpers for solid-boundary setup: `Mask_rectangle_identify` and `Mask_circle_identify`.
@@ -110,7 +110,7 @@ The classifier automatically scans the computational domain according to the des
 
 ```python
 # create classifier (based on field shape)
-boundary_classifier = openLBM.BoundaryClassifier(
+boundary_classifier = taichi_lbm.BoundaryClassifier(
     ti.field(float, shape=(NX_LB, NY_LB))
 )
 
@@ -133,7 +133,7 @@ The boundary engine coordinates the application of all boundary conditions.
 
 ```python
 # create engine
-boundary_engine = openLBM.BoundaryEngine()
+boundary_engine = taichi_lbm.BoundaryEngine()
 
 # register conditions
 boundary_engine.add_boundary_condition("inlet",  velocity_bc)
@@ -155,8 +155,8 @@ Complete workflow for creating a bounded domain:
 
 ```python
 # init engine & classifier
-boundary_engine   = openLBDEM.BoundaryEngine()
-boundary_classifier = openLBDEM.BoundaryClassifier(ti.field(float, shape=(NX_LB, NY_LB)))
+boundary_engine   = taichi_lbm.BoundaryEngine()
+boundary_classifier = taichi_lbm.BoundaryClassifier(ti.field(float, shape=(NX_LB, NY_LB)))
 
 # descriptor
 @ti.func
@@ -166,8 +166,8 @@ def inlet_boundary(i, j):
         flag = 1
     return flag
 
-inlet = openLBDEM.BoundarySpec(geometry_fn=inlet_boundary)
-velocity_bc = openLBDEM.VelocityBB(spec=inlet, velocity_value=ULB, direction=3)
+inlet = taichi_lbm.BoundarySpec(geometry_fn=inlet_boundary)
+velocity_bc = taichi_lbm.VelocityBB(spec=inlet, velocity_value=ULB, direction=3)
 
 # pre-compute node set
 velocity_bc.precompute(classifier=boundary_classifier)
@@ -181,7 +181,7 @@ boundary_engine.apply_boundary_conditions(lb_field)
 
 
 ### Collision Models
-openLBM provides a spectrum of collision models, from the basic BGK to advanced MRT, covering simple flows to complex multiphase problems.
+taichi-lbm provides a spectrum of collision models, from the basic BGK to advanced MRT, covering simple flows to complex multiphase problems.
 
 ```
 Collision (base)
@@ -210,7 +210,7 @@ bgk_params = {
     'shearviscosity' : [shear_viscosity_LB]  # kinematic viscosity (LB units)
 }
 
-collision_engine = openLBM.BGKCollision(bgk_params)
+collision_engine = taichi_lbm.BGKCollision(bgk_params)
 ```
 
 #### `TRTCollision` – Two-relaxation-time model
@@ -228,7 +228,7 @@ trt_params = {
     'magic'          : [0.25]  # TRT Magic parameter
 }
 
-collision_engine = openLBM.TRTCollision(trt_params)
+collision_engine = taichi_lbm.TRTCollision(trt_params)
 ```
 
 #### `MRTCollision` – Multiple-relaxation-time model
@@ -246,7 +246,7 @@ mrt_params = {
     'bulkviscosity'  : [bulk_viscosity_LB]  # bulk viscosity
 }
 
-collision_engine = openLBM.MRTCollision(mrt_params)
+collision_engine = taichi_lbm.MRTCollision(mrt_params)
 ```
 
 The moment space is constructed with the Gram–Schmidt procedure:
@@ -311,10 +311,10 @@ Newtonian and power-law non-Newtonian fluids are currently supported.
 
 ```python
 # Newtonian fluid
-fluid_model = openLBDEM.NewtonianFluid(nu=0.1)
+fluid_model = taichi_lbm.NewtonianFluid(nu=0.1)
 
 # Power-law non-Newtonian fluid
-fluid_model = openLBDEM.PowerLawFluid(m=0.1, n=0.8)  # m: consistency index, n: power-law exponent
+fluid_model = taichi_lbm.PowerLawFluid(m=0.1, n=0.8)  # m: consistency index, n: power-law exponent
 ```
 
 ### Shan-Chen Model – Multi-Component Flows
@@ -352,9 +352,9 @@ sc_pars = {
     'lb_field' : lb_field,
     'g_coh'    : g_coh,
     'group'    : fluid_bc.group,
-    'psi'      : openLBDEM.SC_psi(rho0=1.0)
+    'psi'      : taichi_lbm.SC_psi(rho0=1.0)
 }
-lb_field.sc_field = openLBDEM.ShanChenForceC1(sc_pars)
+lb_field.sc_field = taichi_lbm.ShanChenForceC1(sc_pars)
 ```
 
 

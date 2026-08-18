@@ -1,13 +1,13 @@
-# openLBM/__init__.py
+# taichi_lbm/__init__.py
 
 
-from .openLBM import LBField,MacroscopicEngine
+from .lbm import LBField,MacroscopicEngine
 
 from .BoundaryCondition import BoundarySpec,BoundaryClassifier,VelocityBB,VelocityEquilibrium,VelocityNEEM,PressureABC,PressureNEEM,InsideBoundary,BoundaryEngine,BounceBackWall,FluidBoundary,PeriodicAllBoundary,OpenNeumann,OpenExtrapolation,OpenConvective1order,OpenConvective2order
 
 from .CollisionEngine import BGKCollision, TRTCollision, MRTCollision,HuangMRTCollision
 
-from .openIBM import IBMNodes,Sphere,SphereIB,IBDEMCouplerEngine,IBEngine
+from .ibm import IBMNodes,Sphere,SphereIB,IBDEMCouplerEngine,IBEngine
 
 
 from .ExternalForce import ShanChenForceC1,ShanChenForceC2

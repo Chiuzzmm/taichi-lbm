@@ -2,10 +2,10 @@ import sys
 import os
 
 # 添加包的路径
-sys.path.append(os.path.join(os.path.dirname(__file__), "openLBM"))
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 import taichi as ti
-import openLBDEM
+import taichi_lbm
 import numpy as np
 from matplotlib import cm
 import time
@@ -85,7 +85,7 @@ epslion=np.array([1.0]) #density ratio
 
 #==============================================
 name="test"
-lb_field=openLBDEM.LBField(name,NX_LB,NY_LB,num_components)
+lb_field=taichi_lbm.LBField(name,NX_LB,NY_LB,num_components)
 #unit 
 LB_params={
     'Cl':Cl,
@@ -96,19 +96,19 @@ LB_params={
 lb_field.init_conversion(LB_params)
 
 #==============================================
-boundary_engine=openLBDEM.BoundaryEngine()
-boundary_classifier=openLBDEM.BoundaryClassifier(ti.field(float,shape=(NX_LB,NY_LB)))
+boundary_engine=taichi_lbm.BoundaryEngine()
+boundary_classifier=taichi_lbm.BoundaryClassifier(ti.field(float,shape=(NX_LB,NY_LB)))
 
 @ti.func
 def fluid_boundary(i,j):
     return lb_field.mask[i,j]==1
 
-fluid=openLBDEM.BoundarySpec(geometry_fn=fluid_boundary)
-fluid_bc=openLBDEM.FluidBoundary(spec=fluid)
+fluid=taichi_lbm.BoundarySpec(geometry_fn=fluid_boundary)
+fluid_bc=taichi_lbm.FluidBoundary(spec=fluid)
 fluid_bc.precompute(classifier=boundary_classifier)
 boundary_engine.add_boundary_condition("fluid",fluid_bc)
 
-stream_bc=openLBDEM.PeriodicAllBoundary(spec=fluid)
+stream_bc=taichi_lbm.PeriodicAllBoundary(spec=fluid)
 stream_bc.precompute(classifier=boundary_classifier)
 boundary_engine.add_boundary_condition("stream",stream_bc)
 
@@ -117,13 +117,13 @@ lb_field.neighbor_classify()
 boundary_engine.writing_boundary(lb_field)
 
 #==============================================
-macroscopic_engine=openLBDEM.MacroscopicEngine(fluid_bc.group)
+macroscopic_engine=taichi_lbm.MacroscopicEngine(fluid_bc.group)
 
 #==============================================
 
 params={
     'group':fluid_bc.group,
-    'fluid_model':openLBDEM.NewtonianFluid(nu=shear_viscosity/lb_field.Cnu),
+    'fluid_model':taichi_lbm.NewtonianFluid(nu=shear_viscosity/lb_field.Cnu),
     'NX':NX_LB,
     'NY':NY_LB,
     'num_components':num_components,
@@ -131,9 +131,9 @@ params={
     'bulkviscosity':[bulk_viscosity/lb_field.Cnu]
 }
 
-collision_engine=openLBDEM.MRTCollision(params)
+collision_engine=taichi_lbm.MRTCollision(params)
 
-# collision_engine=openLBDEM.HuangMRTCollision(num_components,fluid_bc.group,k1,epslion,np.array([[g_coh]]))
+# collision_engine=taichi_lbm.HuangMRTCollision(num_components,fluid_bc.group,k1,epslion,np.array([[g_coh]]))
 
 
 #=============================================
@@ -141,17 +141,17 @@ sc_pars={
     'lb_field':lb_field,
     'g_coh':g_coh,
     'group':fluid_bc.group,
-    # 'psi':openLBDEM.CS_psi(params=CS_params),
-    'psi':openLBDEM.SC_psi(rho0=1.0)
+    # 'psi':taichi_lbm.CS_psi(params=CS_params),
+    'psi':taichi_lbm.SC_psi(rho0=1.0)
 }
-lb_field.sc_field = openLBDEM.ShanChenForceC1(sc_pars)
+lb_field.sc_field = taichi_lbm.ShanChenForceC1(sc_pars)
 
-boundary_engine_SC=openLBDEM.BoundaryEngineSC()
-boundary_classifier_psi=openLBDEM.BoundaryClassifier(ti.field(float,shape=(NX_LB+2,NY_LB+2),offset=(-1,-1)))
+boundary_engine_SC=taichi_lbm.BoundaryEngineSC()
+boundary_classifier_psi=taichi_lbm.BoundaryClassifier(ti.field(float,shape=(NX_LB+2,NY_LB+2),offset=(-1,-1)))
 
 
-boundary_engine_SC.add_boundary_condition("periodicLR",openLBDEM.PeriodicPsi_LR())
-boundary_engine_SC.add_boundary_condition("periodicBT",openLBDEM.PeriodicPsi_BT())
+boundary_engine_SC.add_boundary_condition("periodicLR",taichi_lbm.PeriodicPsi_LR())
+boundary_engine_SC.add_boundary_condition("periodicBT",taichi_lbm.PeriodicPsi_BT())
 
 #==============================================
 
@@ -191,7 +191,7 @@ lb_field.init_LBM(collision_engine,fluid_bc.group)
 
 
 #==============================================
-post_processing_engine=openLBDEM.PostProcessingEngine(0)
+post_processing_engine=taichi_lbm.PostProcessingEngine(0)
 
 # ==============================================solve & show
 def lbm_solve():
